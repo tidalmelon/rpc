@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<!--[if lt IE 7 ]> <html lang="en" class="ie6 ielt8"> <![endif]-->
+<!--[if IE 7 ]>    <html lang="en" class="ie7 ielt8"> <![endif]-->
+<!--[if IE 8 ]>    <html lang="en" class="ie8"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--> <html lang="en"> <!--<![endif]-->
+<head>
+<meta charset="utf-8">
+<title>Crawler Test Page</title>
+<link rel="stylesheet" href="{{ static_url("css/login.css")}}" type="text/css"/>
+</head>
+<body>
+<div class="container" align="center">
+	<section id="content">
+		<form action="/login" method="post" >
+			<h1>Login Form</h1>
+			<div>
+				<input type="text" placeholder="Username" required="" id="username" name="username" />
+			</div>
+			<div>
+				<input type="password" placeholder="Password" required="" id="password" name="password" />
+			</div>
+			<div>
+			<select type="select" id="selectid" name="sites">
+					<option value="" class="site" readonly="true" display="block">===请选择===</option>
+					{% for message in messages %}
+						<option class="site" value="{{message["value"]}}" name="{{message["name"]}}">==={{message["value"]}}===</option>
+					{% end %}
+				</select>
+				</div>
+			<div>
+				<input type="submit" value="Log in" align="center"/>
+
+				<!-- <a href="#">Lost your password?</a>
+				<a href="#">Register</a> -->
+			</div>
+		</form><!-- form -->
+		<!-- <div class="button">
+			<a href="#">Download source file</a>
+		</div> --><!-- button -->
+	</section><!-- content -->
+</div><!-- container -->
+</body>
+</html>

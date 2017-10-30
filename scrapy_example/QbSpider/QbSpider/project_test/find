@@ -1,0 +1,33 @@
+作者：farseerfc
+链接：https://www.zhihu.com/question/19588346/answer/131873795
+来源：知乎
+著作权归作者所有，转载请联系作者获得授权。
+
+题主问 PyPy 爲什麽比 CPython 还快，感觉没说出来的言外之意大概是「既然 PyPy 是用 Python 实现的 Python ，两层的自解释的 Python 爲什麽可能会比一层的更快？」大家都在说 JIT 快，这是的确，JIT 技术的确是 PyPy 能比 CPython 快的核心原因之一，但是这不能说明爲什麽 Unladen Swallow 的 JIT 爲什麽被证明无效，也不能说明 PyPy 的 JIT 和 JVM 的 JIT 以及 JavaScript 比如 v8 的 JIT 的本质区别在何处。看题主对问题的编辑历史，似乎题主把 PyPy 的执行过程当作了 Python 的自解释，这个误解需要澄清一下。
+
+要理解这个，首先是一个关键性的问题「PyPy 是用 Python 写的麽？」
+这是一个很难回答的问题，技术上讲， PyPy 的确是用 Python 写的，但是更严格地说， PyPy 的解释器部分是用 RPython 这个 Python 的子集写的。
+
+RPython 是个什麽东西？这又是个很难回答的问题。
+首先 RPython 是一个 Python 的子集，也就是说任何 RPython 写的代码同时也是 Python 的代码，能跑在 CPython 或者 PyPy 或者 IronPython 或者 Jython 这样的 Python 解释器上。但是反过来就不能这麽说，合法的 Python 代码不一定是合法的 RPython 代码。
+
+那麽怎样的 Python 是 RPython 呢？这就没有一个明确的定义了。 PyPy 的官方文档是说「任何能被 PyPy 编译工具链接受的 Python 代码就是 RPython」。不严格地说， RPython 是不允许有动态类型变化的 Python ，一个变量的类型必须固定不变，也就是说 RPython 通过限制 Python 这个动态语言的动态性，把一个动态语言变成了一个静态语言。
+然后关键的部分就是， RPython 通过限制了自己的能力，获得了另一项能力， PyPy 的编译工具链可以静态地对 RPython 代码做类型推导。类型推导是编译的步骤中相当重要的一步，做了类型推导之后，就可以静态地把 RPython 的代码直接翻译成 C 代码然后静态编译了。
+
+上面我说「PyPy 的解释器部分」和「PyPy 的编译工具链」似乎把这两个当作完全独立的东西在谈，然而实际上两者是混杂在一起的。如果去看 PyPy 的源代码，有一部分源代码文件是完全只爲编译工具链写的代码，而另一部分源代码文件，关键的解释器部分，它的代码是混有 RPython 的部分，以及给工具链提示编译的普通的 Python 的部分。PyPy 的解释器代码在用 import 引入的时候，执行的是普通的 Python 代码，然后引入之后实际的解释器工作是 RPython 代码。
+于是 PyPy 解释器就有了两种调用方式：
+直接用 CPython 调用 pypy.py ，这是真正的两层 Python 做自解释， CPython 会直接把 pypy 的 RPython 代码当作普通的 Python 执行，这会比 CPython 慢个几十倍到几百倍。
+先用 CPython（或者别的 Python 解释器） 调用 RPython 编译工具链，工具链是普通的 Python，这个 Python 代码 import 了 RPython 代码到内存里，然后对 RPython 代码做静态分析和类型推导，推导完的结果生成 C 等价的代码，然后调用 gcc 编译成本地代码，然后我们就得到了一个 pypy-c 的可执行文件，这就是 pypy 的编译步骤。然后用 pypy-c （或者直接叫 pypy）去解释执行我们的 Python 代码。
+可以看出第二种调用方式下，PyPy 代码被分爲了两个阶段，第一阶段 CPython 上执行 Python 去翻译 RPython，第二阶段用编译好的本地代码来执行 Python。我们实际用的 PyPy 通常都是指第二种执行方式，那麽执行的时候，并不是两层的 Python 在自解释，而只是一层 Python 的解释器。
+
+然而这个时候还没有谈到 JIT 。在没有 JIT 的情况下，即使用第二种方式调用 PyPy ，其效率仍然比 CPython 要慢个几倍。因爲 CPython 解释器本身是手写的优化非常完善的解释器了，所以用 PyPy 的编译工具链自动生成的等价的解释器在解释速度上比 CPython 要慢不少，这也可以理解。
+
+接下来说说 JIT 。通常的 JIT 比如 JVM 的 JIT 是独立于解释器写的，虽然可能共享一个 parser 前端。后端来看一般是解释器一套代码， JIT 另一套手写的代码，JIT 的目的就是把前端对要解释的中间码拿来生成机器码做编译和优化。 Unladen Swallow 的 JIT 貌似也是这个思路，只不过中间码是 CPython 的 AST ，然后 JIT 是一套独立的代码拿 AST 过来做编译优化成本地代码。这里的困难点在于 Python 的动态性太强了，所以不是很好做，虽然能做（JavaScript 的 v8 就做到了），但是工作量非常大。
+而看 PyPy 上面的实现方式，在第二种执行方式的第一阶段翻译 RPython 到 C 代码的时候，已经有一套方案把 Python 代码变成本地代码了。于是这里 PyPy 的创新之处就在于，其 JIT 针对的不是要解释的 Python 代码，而是 RPython 写的解释器本身。从而 PyPy 的 JIT 编译器是 PyPy 的解释器的一个副产品，而不是一个独立的编译器。并且由于 RPython 是限制了动态性的 Python ， JIT 把 RPython 作爲目标就有了具体的静态类型信息，从而能更好地优化 RPython 进而去优化正在解释执行的 Python 代码。
+
+只需要把 PyPy 的编译阶段加上一个编译选项，配合一些嵌入在 RPython 代码里的 JIT 提示信息， PyPy 编译工具链在编译 RPython 的时候就会在结果里面加入 JIT 需要的信息和指令。从而不光被解释的代码能被 JIT 编译器看到，就连 PyPy 的解释器本身的 RPython 代码也能被 JIT 编译器看到，这样 JIT 做编译优化的时候就能优化掉更多代码量。这是 PyPy 的 JIT 和别的 JIT 本质上不同的地方。有了这样的针对解释器的 JIT ， PyPy 就做到了执行效率快过 CPython 许多倍。
+
+而且神奇的是 PyPy 的这套方案不光适用于 Python，还能适用于别的语言。我们完全可以用 RPython 写一个 Ruby 或者 PHP 的解释器，然后加上编译选项用 PyPy 的编译工具链一编译，我们就得到了一个带 JIT 的 Ruby 或者 PHP 的解释器。实际上 Facebook 就出了一笔钱给 PyPy 开发者，让他们用这套工具链做一个 PHP 的解释器： https://morepypy.blogspot.jp/2012/07/hello-everyone.html
+
+当然 PyPy 的这种做法也有其两面性。比如一个对象的佈局，用传统的 JIT 可能可以一眼看出这个对象的佈局，然后直接翻译到 C struct ， PyPy 来看一个对象就是解释器里的一个 key 爲 string 的 dict ，解释器内部的 dict 和直接写在 Python 代码里的 dict 对象并没有什麽区别。于是要优化起来， PyPy 就要专门对 key 爲 string 并且佈局固定的 dict 做一种特殊优化，有了这个特殊优化，不单对象的访问能加快，普通的 Python 代码里 key 总是 string 的 dict 的访问也能加快。 PyPy 的进化中就在不断做这些特殊优化来改善解释性能。
+并且因爲「这种对解释器的 JIT」的特殊性，dropbox 他们的开发者说 PyPy 在 dropbox 服务器上的性能发挥并不是很好，很大的代码规模的情况下 PyPy 的性能退化到和 CPython 差不多甚至比 CPython 还慢。所以 Dropbox 他们也在继续用传统 JIT 的方案做新的尝试： The Pyston Blog ，非常期待他们的结果。

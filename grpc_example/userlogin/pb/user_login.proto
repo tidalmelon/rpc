@@ -1,0 +1,166 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.qianbao.dataOut.spider.common";
+option java_outer_classname = "UserLoginProto";
+option objc_class_prefix = "UEL";
+
+package userlogin;
+
+import "google/api/annotations.proto";
+
+service UserLogin {
+    rpc loadSites(SitesRequest) returns (SitesResponse) {
+        option (google.api.http) = {
+            post: "/v1/sites"
+            body: "*"
+        };
+    }
+    rpc loginYys(RequestYYS) returns (ResponseYYS) {
+        option (google.api.http) = {
+            post: "/v1/yys"
+            body: "*"
+        };
+        
+    }
+    rpc loginGjj(RequestGJJ) returns (ResponseGJJ) {
+        option (google.api.http) = {
+            post: "/v1/gjj"
+            body: "*"
+        };
+    }
+    rpc searchXmdDzdp(RequestXmdDzdpSearch) returns (ResponseXmdDzdpSearch) {
+        option (google.api.http) = {
+            post: "/v1/dzdpsearch"
+            body: "*"
+        };
+    }
+    rpc getCommentsXmdDzdp(RequestXmdDzdpComment) returns (ResponseXmdDzdpComment) {
+        option (google.api.http) = {
+            post: "/v1/dzdpcomments"
+            body: "*"
+        };
+    }
+}
+
+message SitesRequest {
+    int32 unamed = 1;
+}
+
+message SitesResponse {
+    string sites = 1;
+}
+
+message RequestYYS {
+    string token = 1;
+    string site = 2;
+    string idcard = 3;
+    string name = 4;
+    string phone = 5;
+    string pwd = 6;
+    string repwd = 7;
+    string sms = 8;
+}
+
+message ResponseYYS {
+    string token = 1;
+    LoginStatus status = 2;
+    int32 code = 3;
+}
+
+enum CODEYYS {
+    YYS_S_WAIT = 0;
+    YYS_I_SUCCESS = 1001;
+    YYS_I_INPUT_SMS_AGAIN = 1002;
+    YYS_I_INPUT_SMS = 1003;
+    YYS_I_PWD_ERR = 1004;
+    YYS_I_SMS_ERR = 1005;
+    YYS_I_SMS_INVALID = 1006;
+    YYS_I_IDCARD_INVALID = 1007;
+    YYS_I_PWD_SIM_INIT = 1008;
+    YYS_I_LOGIN_SUCCESS = 1009;
+    YYS_I_PHONE_INVALID = 1010;
+    YYS_I_NAME_INVALID = 1011;
+    YYS_I_PHONE_NOT_SUPPORT = 1012;
+    YYS_I_SERVICE_OFF = 1013;
+    YYS_I_CXXD_1001 = 1014;
+    YYS_I_CXXD_1001_AGAIN = 1015;
+    YYS_I_INPUT_REPWD = 1016;
+    YYS_I_REPWD_ERR = 1017;
+    YYS_I_FETCH_TIMEOUT = 1018;
+    YYS_I_FETCH_EXCEPTION = 1999;
+}
+
+enum LoginStatus {
+    MEANLESS = 0;
+    SUCCESS = 1;
+    PROCESS = 2;
+    FAILED = 3;
+}
+
+message RequestGJJ {
+    string token = 1;
+    string site = 2;
+    string idcard = 3;
+    string pwd = 4;
+    string sms = 5;
+}
+
+message ResponseGJJ {
+    string token = 1;
+    LoginStatus status = 2;
+    int32 code = 3;
+}
+
+enum CODEGJJ {
+    GJJ_S_WAIT = 0;
+    GJJ_I_SUCCESS = 2101;
+    GJJ_I_LOGIN_SUCCESS = 2102;
+    GJJ_I_INPUT_SMS = 2103;
+    GJJ_I_PWD_ERR = 2104;
+    GJJ_I_SMS_ERR = 2105;
+    GJJ_I_FETCH_EXCEPTION = 2199;
+}
+
+message RequestXmdDzdpSearch {
+    string token = 1;
+    string city = 2;
+    string shopName = 3;
+    string shopId = 4;
+}
+
+message ResponseXmdDzdpSearch {
+    string token = 1;
+    LoginStatus status = 2;
+    int32 code = 3;
+    string shopInfo = 4;
+}
+
+enum CODEXmdDzdpSearch {
+    XMD_DZDP_S_S_WAIT = 0;
+    XMD_DZDP_S_I_SUCCESS = 3001;
+    XMD_DZDP_S_I_CITY_NOT_FOUND = 3002;
+    XMD_DZDP_S_I_FETCH_EXCEPTION = 3099;
+}
+
+message RequestXmdDzdpComment {
+    string token = 1;
+    string shopID = 2;
+}
+
+message ResponseXmdDzdpComment {
+    string token = 1;
+    LoginStatus status = 2;
+    int32 code = 3;
+    repeated string comments = 4;
+    string basicinfo = 5;
+}
+
+enum CODEXmdDzdpComment {
+    XMD_DZDP_C_S_WAIT = 0;
+    XMD_DZDP_C_I_SUCCESS = 3101;
+    XMD_DZDP_C_I_DISAPPEAR = 3102;
+    XMD_DZDP_C_I_FETCH_EXCEPTION = 3199;
+}
+
+

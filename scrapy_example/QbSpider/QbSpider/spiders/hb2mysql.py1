@@ -1,0 +1,145 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+########################################################################
+# 
+# Copyright (c) 2017 Qianbao.com, Inc. All Rights Reserved
+# 
+########################################################################
+ 
+import sys
+import os
+import json
+sys.path.append(os.path.abspath("../../"))
+from QbSpider.utils.hbclient import HbClient
+
+from collections import namedtuple
+from itertools import groupby
+
+
+class Record(object):
+    pass
+
+
+MapRecord = namedtuple('MapRecord', 'fc k1 k2 tabname colname num')
+
+from operator import attrgetter
+
+def getmrecords():
+    fname = './config/unicom'
+    res = []
+    with open(fname) as fl:
+        while True:
+            line = fl.readline()
+            if not line:
+                break
+            if line.startswith('#'):
+                continue
+            arr = line.split()
+            if len(arr) < 6:
+                raise Exception('format err')
+
+            maprecord = MapRecord(fc=arr[0], k1=arr[1], k2=arr[2], tabname=arr[3], colname=arr[4], num=arr[5])
+            res.append(maprecord)
+    mapping = {}
+    for k, gs in groupby(res, attrgetter('tabname')):
+        mapping[k] = list(gs)
+    return mapping
+
+
+def makeRecords(dic, maprecords):
+    # 确认一个表的范围
+    fc = maprecords[0].fc
+    k1 = maprecords[0].k1
+    tabname = maprecords[0].tabname
+    m = maprecords[0].num
+    # 获取数据
+
+    if m == 'm':
+        t = []
+        if fc in dic and k1 in dic[fc]:
+            rlist = dic[fc][k1]
+            if rlist:
+                for r in rlist:
+                    obj = Record()
+                    setattr(obj, 'tabname', tabname)
+                    setattr(obj, 'pagekey', r['pagekey'])
+                    setattr(obj, 'rowkey', r['rowkey'])
+                    for maprecord in maprecords:
+                        k2 = maprecord.k2
+                        val = r[k2]
+                        colname = maprecord.colname
+                        setattr(obj, colname, val)
+                    t.append(obj)
+        return t
+
+    elif m == 's':
+        obj_1 = Record()
+        for maprecord in maprecords:
+            fc = maprecord.fc
+            k1 = maprecord.k1
+            k2 = maprecord.k2
+            tabname = maprecord.tabname
+            setattr(obj_1, 'tabname', tabname)
+            colname = maprecord.colname
+
+            # 去各个表取字段
+            if fc in dic and k1 in dic[fc]:
+                rlist = dic[fc][k1]
+                if rlist:
+                    r = rlist[0]
+                    setattr(obj_1, 'pagekey', r['pagekey'])
+                    setattr(obj_1, 'rowkey', r['rowkey'])
+                    val = r.get(k2, 'nil')
+                    if val != 'nil':
+                        setattr(obj_1, colname, val)
+        return [obj_1]
+    else:
+        return []
+
+
+mprecords = getmrecords()
+
+
+cli = HbClient()
+rowkey = 'YYS_LT_15507312690_e1f9803e1fee11e7a393964791d484c0'
+rowkey = 'YYS_LT_15507312690_e75d6a82234411e7b339964791d484c0'
+
+
+rowkey, bigdic = cli.selectasdict(rowkey=rowkey)
+
+import json
+
+for tabname, maprecords in mprecords.items():
+    # 确认一个表的范围
+    t = makeRecords(bigdic, maprecords)
+    for e in t:
+        print tabname, json.dumps(e.__dict__)
+    print '--------' * 10
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

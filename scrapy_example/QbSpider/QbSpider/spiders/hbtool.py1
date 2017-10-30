@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+########################################################################
+# 
+# Copyright (c) 2017 Qianbao.com, Inc. All Rights Reserved
+# 
+########################################################################
+ 
+"""
+File: hbtool.py
+Author: wangqj(wangqj@qianbao.com)
+Date: 2017/04/13 10:49:53
+"""
+import sys
+import os
+sys.path.append(os.path.abspath("../../"))
+from QbSpider.utils.hbclient import HbClient
+
+cli = HbClient()
+
+#rowkey = 'YYS_LT_15507312690_e1f9803e1fee11e7a393964791d484c0'
+#
+#for rowkey, col, res, arr, name in cli.select(rowkey):
+#    print rowkey, col, name
+#    print arr
+#    print res
+#    print '--------------' * 10
+
+
+prefix = 'YYS_LT'
+
+rows = cli.getrowkeys(prefix=prefix)
+for row in rows:
+    print row
+
+
+#cli.delrowsprefix(prefix=prefix)
